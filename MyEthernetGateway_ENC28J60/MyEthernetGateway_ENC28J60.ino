@@ -83,8 +83,12 @@ int inputPos = 0;
 
 void setup()  
 { 
+  // Damit Watchdog korrekt funktioniert, muss bei mehreren Boards (z.B. Pro MiniU) ein anderer Bootloader installiert werden. Z.B. Optiboot
+  // s. http://sysmagazine.com/posts/189744/ oder Originalpost: http://habrahabr.ru/post/189744/
+  wdt_disable();
   // set watchdog
-  wdt_enable(WDTO_2S);
+  wdt_enable(WDTO_8S);
+  //wdt_reset();
   
   // Initialize gateway at maximum PA level, channel 70 and callback for write operations 
   gw.begin(RF24_PA_LEVEL_GW, RF24_CHANNEL, RF24_DATARATE, writeEthernet);
@@ -96,6 +100,9 @@ void setup()
 
   // start listening for clients
   server.begin();
+  
+  // set watchdog
+  wdt_enable(WDTO_2S);
 }
 
 // This will be called when data should be written to ethernet 
