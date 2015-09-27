@@ -12,13 +12,19 @@ void setup()
   Serial.print(NODE_ID);
   Serial.println(" Please wait...");
 
-  hw_writeConfig(EEPROM_NODE_ID_ADDRESS, NODE_ID);
+  uint8_t _nodeId = NODE_ID;
+  hw_writeConfig(EEPROM_NODE_ID_ADDRESS, _nodeId);
 
   Serial.println("Done. You're ready to go!");
 }
 
 void loop()      
 { 
-  // Nothing to do here...
+  boolean b = true;
+  while(true){
+    digitalWrite(13, b?0:1);     
+    b=!b;
+    delay(100);
+  }
 }
 
