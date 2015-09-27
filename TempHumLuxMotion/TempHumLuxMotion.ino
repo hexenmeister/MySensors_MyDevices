@@ -6,7 +6,7 @@
 #include <AS_BH1750.h>
 #include <Wire.h> 
 
-#define VERSION "1.1"
+#define VERSION "1.2"
 
 #define DEBUG 0
 #define REPEATER 1
@@ -24,6 +24,7 @@
 #define HUMIDITY_SENSOR_DIGITAL_PIN 4 // The digital input you attached DHT sensot
 #define MOT_SENSOR_PIN 3              // The digital input you attached your motion sensor.  (Only 2 and 3 generates interrupt!)
 #define INTERRUPT MOT_SENSOR_PIN-2    // Usually the interrupt = pin -2 (on uno/nano anyway)
+#define INTERRUPT_MODE CHANGE
 
 // LED pins
 //#define PIN_LED_RED 6
@@ -40,7 +41,10 @@
 #define MAX_DIFF_H 5 // Send immediately when the difference is greater than X percent
 
 
-unsigned long SLEEP_TIME = 1000; // Sleep time between Distance reads (in milliseconds)
+//unsigned long SLEEP_TIME = 1000; // Sleep time between Distance reads (in milliseconds)
+// Aufpassen bei SleepTime wg. Watchdog!
+#define SLEEP_TIME 1000 // Sleep time between Distance reads (in milliseconds) (be careful with watchdogbe careful with watchdog (if used)!)
+
 
 // Ideen: Parameter aus der Ferne aendern und in EEPROM speichern: MIN/MAX Time, Sende-Grenzwerte, LED-Benutzung
 
@@ -154,6 +158,12 @@ void setup()
   }
   
   //metric = gw.getConfig().isMetric;  
+
+  #if defined (INTERRUPT)
+  if(mot_present) {
+    attachInterrupt(INTERRUPT, sendMot, INTERRUPT_MODE);  
+  }
+  #endif
 }
 
 void loop()      
