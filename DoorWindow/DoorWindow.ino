@@ -2,7 +2,7 @@
 #include <MySensor.h> 
 
 #define SKETCH_NAME "Door Window Sensor"
-#define VERSION "1.1"
+#define VERSION "1.2"
 
 #define DEBUG 1
 #define REPEATER 0
@@ -17,6 +17,7 @@
 // Switch pin
 #define SWITCH_PIN 3           // Arduino Digital I/O pin for button/reed switch or IR-Sensor
 #define INTERRUPT SWITCH_PIN-2 // Usually the interrupt = pin -2 (on uno/nano anyway)
+#define INTERRUPT_MODE CHANGE
 
 // LED pins
 #define PIN_LED 7
@@ -25,7 +26,8 @@
 #define TIME_MAX_REPLAY_DOOR_WIN 600000 // Maximum time to send values even if not changed
 #define TIME_MIN_REPLAY_DOOR_WIN 100    // Minimum time to send values even if changed
 
-unsigned long SLEEP_TIME = 1000; // Sleep time between Distance reads (in milliseconds) (be careful with watchdogbe careful with watchdog (if used)!)
+// Aufpassen bei SleepTime wg. Watchdog!
+#define SLEEP_TIME 1000 // Sleep time between Distance reads (in milliseconds) (be careful with watchdogbe careful with watchdog (if used)!)
 
 //-----------------------------------------------------------------------------------------------
 
@@ -65,9 +67,8 @@ void setup()
   // Setup the buttons
   //pinMode(SWITCH_PIN, INPUT);
   // Activate internal pull-ups
-  //digitalWrite(SWITCH_PIN, HIGH);
-  // should be a better way to activate the pull-ups
   pinMode(SWITCH_PIN, INPUT_PULLUP);
+  digitalWrite(SWITCH_PIN, HIGH);
   
   // Define LED pins
   pinMode(PIN_LED, OUTPUT);
@@ -82,6 +83,10 @@ void setup()
   gw.present(CHILD_ID_DOOR_WIN, S_DOOR);  
 
   //metric = gw.getConfig().isMetric;
+
+  #if defined (INTERRUPT)
+  attachInterrupt(INTERRUPT, sendMsg, INTERRUPT_MODE);
+  #endif
   
   #if USE_WATCHDOG > 0
   // set watchdog
@@ -181,7 +186,7 @@ bool sleep(uint8_t interrupt, uint8_t mode, unsigned long ms) {
   bool ret = gw.sleep(interrupt,mode, ms);
   if(ret) {
     // interrupted
-    // Statistisch dürfe im Mittel dir Hälfte der Zeit ein akzeptabler Wert bei Interrupts sein
+    // Statistisch dürfe im Mittel die Hälfte der Zeit ein akzeptabler Wert bei Interrupts sein
     timeCorrection += (ms/2);
   } else {
     timeCorrection += ms;
