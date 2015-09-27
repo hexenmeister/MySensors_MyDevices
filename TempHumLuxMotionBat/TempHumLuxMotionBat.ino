@@ -6,7 +6,7 @@
 #include <AS_BH1750.h>
 #include <Wire.h> 
 
-#define VERSION "1.1"
+#define VERSION "1.2"
 
 #define DEBUG 1
 #define REPEATER 0
@@ -41,7 +41,9 @@
 
 #define INTERRUPT_MODE CHANGE
 
-unsigned long SLEEP_TIME = 1000; // Sleep time between Distance reads (in milliseconds)
+//unsigned long SLEEP_TIME = 1000; // Sleep time between Distance reads (in milliseconds)
+// Aufpassen bei SleepTime wg. Watchdog!
+#define SLEEP_TIME 1000 // Sleep time between Distance reads (in milliseconds) (be careful with watchdogbe careful with watchdog (if used)!)
 
 
 #define DEF_BATTERY_ENABLE_PIN 7 // enablePin: The pin which enables the external measurement helper hardware. Set to 0 if not needed.
@@ -165,10 +167,13 @@ void setup()
   }
   
   //metric = gw.getConfig().isMetric;  
-  
+
+  #if defined (INTERRUPT)
   if(mot_present) {
     attachInterrupt(INTERRUPT, sendMot, INTERRUPT_MODE);  
   }
+  #endif
+  
   //BATTERY_MODE_BANDGAP_MESSUREMENT
   setupBattery(BATTERY_MODE_EXTERNAL_MESSUREMENT, DEF_BATTERY_ENABLE_PIN, DEF_BATTERY_ADC_PIN, DEF_BATTERY_FACT, DEF_BATTERY_TIME);
 }
@@ -187,11 +192,13 @@ void loop()
   
   #if REPEATER == 0
   Serial.println("1->");
-  
-    // Sleep until interrupt comes in on motion sensor. Send update every X minutes.
-    if(mot_present) {
-      detachInterrupt(INTERRUPT);  
-    }
+
+  #if defined (INTERRUPT)
+  // Sleep until interrupt comes in on motion sensor. Send update every X minutes.
+  if(mot_present) {
+    detachInterrupt(INTERRUPT);  
+  }
+  #endif
   
     Serial.println("2->");
   
@@ -207,9 +214,11 @@ void loop()
     #if DEBUG == 1
     Serial.println(cMillis());
     #endif
+    #if defined (INTERRUPT)
     if(mot_present) {
       attachInterrupt(INTERRUPT, sendMot, INTERRUPT_MODE);  
     }
+    #endif
     Serial.println("4->");
   #endif
   
