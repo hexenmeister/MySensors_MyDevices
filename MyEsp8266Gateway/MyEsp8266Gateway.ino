@@ -19,6 +19,7 @@
  *******************************
  *
  * REVISION HISTORY
+ * Version 1.0.1 - Hexenmeister - quick fix: line endings for FHEM
  * Version 1.0 - Henrik EKblad
  * Contribution by a-lurker and Anticimex, 
  * Contribution by Norbert Truchsess <norbert.truchsess@t-online.de>
@@ -249,7 +250,7 @@ void loop() {
           // echo the string to the serial port
           Serial.print("Client "); Serial.print(i); Serial.print(": "); Serial.println(inputString[i].string);
     
-          parseAndSend(gw, inputString[i].string);
+          parseAndSend(gw, strcat(inputString[i].string,"\n"));
     
           // clear the string:
           inputString[i].idx = 0;
