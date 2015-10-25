@@ -3,7 +3,7 @@
 #include <DHT.h>
 
 //#include <BH1750.h>
-#include <AS_BH1750.h>
+#include <AS_BH1750A.h>
 #include <Wire.h>
 
 //-------- define these in your sketch, if applicable ----------------------------------------------------------
@@ -12,11 +12,11 @@
 // reducing the size and latency of the handler.
 //#define NO_PORTB_PINCHANGES // to indicate that port b will not be used for pin change interrupts
 //#define NO_PORTC_PINCHANGES // to indicate that port c will not be used for pin change interrupts
-// #define NO_PORTD_PINCHANGES // to indicate that port d will not be used for pin change interrupts
+//#define NO_PORTD_PINCHANGES // to indicate that port d will not be used for pin change interrupts
 // if there is only one PCInt vector in use the code can be inlined
 // reducing latency and code size
 // define DISABLE_PCINT_MULTI_SERVICE below to limit the handler to servicing a single interrupt per invocation.
-// #define       DISABLE_PCINT_MULTI_SERVICE
+//#define       DISABLE_PCINT_MULTI_SERVICE
 //-------- define the above in your sketch, if applicable ------------------------------------------------------
 
 #define VERSION "1.1"
@@ -35,13 +35,16 @@
 #define CHILD_ID_DOOR 5
 #define CHILD_ID_LOCK 6
 
-#define CHILD_CCMD_ID 100 // receive Controller command
+// receive Controller command
+#define CHILD_CCMD_ID 100 
 
 // Sensors PIN Config
 #define MOT_SENSOR_PIN 3              // The digital input you attached your motion sensor.  (Only 2 and 3 generates interrupt!)
 // remove INTERRUPT definition to disable interrupts
 #define INTERRUPT MOT_SENSOR_PIN-2    // Usually the interrupt = pin -2 (on uno/nano anyway)
 #define INTERRUPT_MODE CHANGE
+
+// Use pin change interrupts for DOOR and LOCK contacts
 // remove PC_INTERRUPT definition to disable pinchange interrupts
 #define PC_INTERRUPT dummy
 
@@ -71,8 +74,8 @@
 #define TIME_MAX_REPLAY_LOCK 600000 // Maximum time to send lock status even if not changed
 #define TIME_MIN_REPLAY_LOCK 70
 
-
-//#define SLEEP_TIME 50 // Sleep time between Distance reads (in milliseconds)
+// Sleep time between Distance reads (in milliseconds), remove to disable
+//#define SLEEP_TIME 50
 
 // Ideen: Parameter aus der Ferne aendern und in EEPROM speichern: MIN/MAX Time, Sende-Grenzwerte, LED-Benutzung
 
@@ -81,7 +84,7 @@
 MySensor gw;
 
 //BH1750 lightSensor;
-AS_BH1750 lightSensor;
+AS_BH1750A lightSensor;
 
 MyMessage msgLux(CHILD_ID_LIGHT, V_LIGHT_LEVEL);
 float lastLux = -1;
@@ -91,17 +94,20 @@ uint16_t lastMot = 0;
 
 MyMessage msgDoor(CHILD_ID_DOOR, V_TRIPPED);
 uint16_t lastDoor = 0;
-MyMessage msgLock(CHILD_ID_LOCK, V_TRIPPED);
+
+MyMessage msgLock(CHILD_ID_LOCK, V_LOCK_STATUS);
 uint16_t lastLock = 0;
 
 boolean metric = true;
 
-//-----------------------------------------------------------------------------------------------
-boolean mot_present = true; // can not be autodetected
+// Sensoren vorhanden?
+boolean mot_present = true;  // can not be autodetected
 boolean door_present = true; // can not be autodetected
 boolean lock_present = true; // can not be autodetected
-boolean lux_present = false;
-//-----------------------------------------------------------------------------------------------
+boolean lux_present = false; // can be autodetected
+
+// LED-Methoden
+//    on/off
 void ledR(boolean b) {
   digitalWrite(PIN_LED_A_R, b ? 1 : 0);
 }
@@ -119,6 +125,8 @@ unsigned int blinkRtime = 0;
 unsigned int blinkGtime = 0;
 unsigned int blinkBtime = 0;
 unsigned int blinkYtime = 0;
+
+//    Blinkgeschwindigkeit
 void ledRBlink(unsigned int b) {
   blinkRtime = b;
 }
@@ -132,16 +140,23 @@ void ledYBlink(unsigned int b) {
   blinkYtime = b;
 }
 
+//-----------------------------------------------------------------------------------------------
+
 void setup()
 {
-#if USE_WATCHDOG > 0
-  // Damit Watchdog korrekt funktioniert, muss bei mehreren Boards (z.B. Pro MiniU) ein anderer Bootloader installiert werden. Z.B. Optiboot
-  // s. http://sysmagazine.com/posts/189744/ oder Originalpost: http://habrahabr.ru/post/189744/
-  wdt_disable();
-  // set watchdog
-  wdt_enable(WDTO_8S);
-  //wdt_reset();
-#endif
+  // configure Watchdog - startet das Device im Falle eines Freezes neu
+  #if USE_WATCHDOG > 0
+    // Damit Watchdog korrekt funktioniert, muss bei mehreren Boards (z.B. Pro MiniU) ein anderer Bootloader installiert werden. Z.B. Optiboot
+    // s. http://sysmagazine.com/posts/189744/ oder Originalpost: http://habrahabr.ru/post/189744/
+    wdt_disable();
+    // set watchdog
+    wdt_enable(WDTO_8S);
+    //wdt_reset();
+  #endif
+
+  // configure pins for the status LEDs
+  //pinMode(PIN_LED_RED, OUTPUT);
+  pinMode(PIN_LED_GREEN, OUTPUT);
 
   pinMode(PIN_LED_A_R, OUTPUT);
   pinMode(PIN_LED_A_G, OUTPUT);
@@ -149,51 +164,49 @@ void setup()
   pinMode(PIN_LED_A_Y, OUTPUT);
 
   // Test the LEDs
+  //digitalWrite(PIN_LED_RED,1); // LED red
+  //delay(100);
+  digitalWrite(PIN_LED_GREEN, 1); // LED green
+  delay(100);
   ledG(true);
-  delay(150);
+  delay(100);
   ledY(true);
-  delay(150);
+  delay(100);
   ledR(true);
-  delay(150);
+  delay(100);
   ledB(true);
 
-#if REPEATER == 1
-  // The third argument enables repeater mode.
-  // Keep node awake all time (no slepping!). Pump the radio network by calling process() in your loop(). The MySensors library will take care of all routing in the background.
-  gw.begin(incomingMessage, AUTO, true);
-#else
-  // Normal Node
-  gw.begin(incomingMessage, AUTO, false);
-#endif
+  // configure MySesnsors system
+  #if REPEATER == 1
+    // The third argument enables repeater mode.
+    // Keep node awake all time (no slepping!). Pump the radio network by calling process() in your loop(). The MySensors library will take care of all routing in the background.
+    gw.begin(incomingMessage, AUTO, true);
+  #else
+    // Normal Node
+    gw.begin(incomingMessage, AUTO, false);
+  #endif
 
-  // Init Sensors
+  // autodetect and initialize sensors
 
   // autodetect BH1750
-  if (!lightSensor.begin()) {
+  if (!lightSensor.begin(RESOLUTION_AUTO_HIGH,false)) {
     lux_present = false;
-#if MYDEBUG > 0
-    Serial.println("LightSensor not found");
-#endif
+    #if MYDEBUG > 0
+      Serial.println("LightSensor not found");
+    #endif
   } else {
     lux_present = true;
-#if MYDEBUG > 0
-    Serial.println("LightSensor found");
-#endif
+    #if MYDEBUG > 0
+      Serial.println("LightSensor found");
+    #endif
   }
 
-  // sets the motion sensor digital pin as input
+  // sets right mode for the sensor pins
   pinMode(MOT_SENSOR_PIN, INPUT);
-
   pinMode(DOOR_SENSOR_PIN, INPUT_PULLUP);
   digitalWrite(DOOR_SENSOR_PIN, HIGH);
   pinMode(LOCK_SENSOR_PIN, INPUT_PULLUP);
   digitalWrite(LOCK_SENSOR_PIN, HIGH);
-
-  // Define LED pins
-  //pinMode(PIN_LED_RED, OUTPUT);
-  pinMode(PIN_LED_GREEN, OUTPUT);
-  //digitalWrite(PIN_LED_RED,0); // LED red
-  digitalWrite(PIN_LED_GREEN, 0); // LED green
 
   // Send the sketch version information to the gateway and Controller
   //gw.sendSketchInfo("Temp+Hum+Lux+Motion", "1.0");
@@ -213,12 +226,12 @@ void setup()
   }
   sketch_name = strcat(const_cast<char*>(sketch_name), ")");
 
-#if MYDEBUG > 0
-  Serial.print("Sketch: ");
-  Serial.print(sketch_name);
-  Serial.print(" Version: ");
-  Serial.println(VERSION);
-#endif
+  #if MYDEBUG > 0
+    Serial.print("Sketch: ");
+    Serial.print(sketch_name);
+    Serial.print(" Version: ");
+    Serial.println(VERSION);
+  #endif
 
   gw.sendSketchInfo(sketch_name, VERSION);
 
@@ -243,6 +256,7 @@ void setup()
 
   //metric = gw.getConfig().isMetric;
 
+  // attach interupts (if any used)
   #if defined (INTERRUPT)
   if(mot_present) {
     attachInterrupt(INTERRUPT, sendMot, INTERRUPT_MODE);  
@@ -251,34 +265,40 @@ void setup()
   #if defined (PC_INTERRUPT)
   //PCintPort::attachInterrupt(DOOR_SENSOR_PIN, &sendDoor, CHANGE);
   //PCintPort::attachInterrupt(LOCK_SENSOR_PIN, &sendLock, CHANGE);
-  // Beide obere PCInts zu aktivieren führte zum Hänge, daher beides in einer Methode
+  // Beide obere PCInts zu aktivieren führte zum Aufhängen, daher beides in einer Methode
   PCintPort::attachInterrupt(LOCK_SENSOR_PIN, &sendDoorAndLock, CHANGE);
   #endif
 
   // turn the LEDs off
   ledG(false);
-  delay(150);
+  delay(100);
   ledY(false);
-  delay(150);
+  delay(100);
   ledR(false);
-  delay(150);
+  delay(100);
   ledB(false);
+  //delay(100);
+  //digitalWrite(PIN_LED_RED,0); // LED red
+  delay(100);
+  digitalWrite(PIN_LED_GREEN, 0); // LED green
+
 
   #if USE_WATCHDOG > 0
-  // set watchdog
-  //wdt_enable(WDTO_4S);
-  wdt_reset();
+    // set watchdog
+    //wdt_enable(WDTO_4S);
+    wdt_reset();
   #endif
 
+  // TEST ONLY!
   ledGBlink(250);
-  ledYBlink(700);
-  ledRBlink(400);
+  ledYBlink(800);
+  ledRBlink(100);
   ledBBlink(800);
 }
 
 void sendDoorAndLock() {
   #if MYDEBUG > 0
-  Serial.println("PC Int handler");
+    Serial.println("PC_INT handler activated");
   #endif
 
   sendDoor();
@@ -287,10 +307,10 @@ void sendDoorAndLock() {
 
 void loop()
 {
-#if USE_WATCHDOG > 0
-  // watchdog reset
-  wdt_reset();
-#endif
+  #if USE_WATCHDOG > 0
+    // watchdog reset
+    wdt_reset();
+  #endif
 
   // Blink
   blink();
@@ -321,16 +341,16 @@ void loop()
     sendLux();
   }
 
-#if defined (SLEEP_TIME)
-  // Sleep until interrupt comes in on motion sensor. Send update every X minutes.
-  // Auchtung! Wird Zeitprobleme geben, Korrektur notwendig.
-  sleep(INTERRUPT, CHANGE, SLEEP_TIME);
-#endif
+  #if defined (SLEEP_TIME)
+    // Sleep until interrupt comes in on motion sensor. Send update every X minutes.
+    // Auchtung! Wird Zeitprobleme geben, Korrektur notwendig.
+    sleep(INTERRUPT, CHANGE, SLEEP_TIME);
+  #endif
 
-#if REPEATER == 1
-  // process radio messages (use for repeater and aktor nodes)
-  gw.process();
-#endif
+  #if REPEATER == 1
+    // process radio messages (use for repeater and aktor nodes)
+    gw.process();
+  #endif
 
   // Blink
   blink();
@@ -479,17 +499,9 @@ bool sleep(uint8_t interrupt, uint8_t mode, unsigned long ms) {
 //-----------------------------------------------------------------------------------------------
 
 unsigned long lastTimeLux = cMillis() + TIME_MIN_REPLAY_LUX + 1;
+//boolean luxReadingRunning=false;
 void sendLux()
 {
-
-  // Prüfen, ob Sensor antwortet
-  if (!lightSensor.isPresent()) {
-#if MYDEBUG > 0
-    Serial.println("LightSensor not found");
-#endif
-    return;
-  }
-
   unsigned long time = cMillis();
 
   // Zeitdifferenz zum letzten Senden
@@ -520,18 +532,27 @@ void sendLux()
   // Nach verstreichen eines definierten Intervals soll in jedem Fall gesendet werden
 
   boolean sendAnyway = delayTime >= TIME_MAX_REPLAY_LUX;
-
-  //uint16_t lux = lightSensor.readLightLevel();// Get Lux value
-  float lux = lightSensor.readLightLevel();// Get Lux value
-
-#if MYDEBUG > 0
-  Serial.print("Lux: ");
-  Serial.println(lux);
-#endif
+  
+  lightSensor.startMeasurementAsync(cMillis);
+  while(!lightSensor.isMeasurementReady()) {
+    //delay(lightSensor.nextDelay());
+    unsigned long x = lightSensor.nextDelay();
+    unsigned long st=cMillis();
+    while(cMillis()<st+x) {
+      delay(10);
+      blink();
+    } 
+  }
+  float lux=lightSensor.readLightLevelAsync();
+  
+  #if MYDEBUG > 0
+    Serial.print("Lux: ");
+    Serial.println(lux);
+  #endif
 
   float diff = abs(lux - lastLux);
   boolean doSend = false;
-  // Weil exponentielle Funktion, mehrere Stufen
+  // Weil exponentielle Funktion, mehrere Stufen (vereinfacht)
   if (lastLux < 1) {
     doSend = diff > 0.5;
   } else if (lastLux < 5) {
@@ -548,25 +569,16 @@ void sendLux()
     doSend = diff > 10000;
   }
 
-
-  // Senden, wenn Abweichung > als 1% ist.
-  //uint16_t aDiff = abs(lux - lastLux);
-  //uint16_t pAbw = (min(lux,lastLux)/100);
-
-  //#if MYDEBUG > 1
-  //Serial.print("aDiff: ");
-  //Serial.println(aDiff);
-  //Serial.print("pAbw: ");
-  //Serial.println(pAbw);
-  //#endif
-
-  //if (sendAnyway || aDiff > pAbw) {
   if (sendAnyway || doSend) {
     //gw.send(msgLux.set(lux));
     gw.send(msgLux.set(lux, 2));
     lastLux = lux;
     // Zeit merken
     lastTimeLux = cMillis();
+
+
+    Serial.print("->Lux: ");
+    Serial.println(lux);
   }
 }
 
@@ -680,7 +692,7 @@ void sendMot()
 
   // Read digital motion value
   boolean tripped = digitalRead(MOT_SENSOR_PIN) == HIGH;
-  digitalWrite(5, tripped ? 1 : 0); //TEST TODO
+  digitalWrite(PIN_LED_GREEN, tripped ? 1 : 0); //TEST TODO
 
 #if MYDEBUG > 0
   Serial.print("Motion: ");
