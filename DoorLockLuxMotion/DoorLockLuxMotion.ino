@@ -107,44 +107,12 @@ boolean door_present = true; // can not be autodetected
 boolean lock_present = true; // can not be autodetected
 boolean lux_present = false; // can be autodetected
 
+// LEDs
 #include <AS_Blink.h>
 AS_Blink ledR(PIN_LED_A_R, cMillis);
 AS_Blink ledG(PIN_LED_A_G, cMillis);
 AS_Blink ledB(PIN_LED_A_B, cMillis);
 AS_Blink ledY(PIN_LED_A_Y, cMillis);
-// LED-Methoden
-//    on/off
-//void ledR(boolean b) {
-//  digitalWrite(PIN_LED_A_R, b ? 1 : 0);
-//}
-//void ledG(boolean b) {
-//  digitalWrite(PIN_LED_A_G, b ? 1 : 0);
-//}
-//void ledB(boolean b) {
-//  digitalWrite(PIN_LED_A_B, b ? 1 : 0);
-//}
-//void ledY(boolean b) {
-//  digitalWrite(PIN_LED_A_Y, b ? 1 : 0);
-//}
-
-//unsigned int blinkRtime = 0;
-//unsigned int blinkGtime = 0;
-//unsigned int blinkBtime = 0;
-//unsigned int blinkYtime = 0;
-
-//    Blinkgeschwindigkeit
-//void ledRBlink(unsigned int b) {
-//  blinkRtime = b;
-//}
-//void ledGBlink(unsigned int b) {
-//  blinkGtime = b;
-//}
-//void ledBBlink(unsigned int b) {
-//  blinkBtime = b;
-//}
-//void ledYBlink(unsigned int b) {
-//  blinkYtime = b;
-//}
 
 //-----------------------------------------------------------------------------------------------
 
@@ -164,26 +132,17 @@ void setup()
   //pinMode(PIN_LED_RED, OUTPUT);
   pinMode(PIN_LED_GREEN, OUTPUT);
 
-  //pinMode(PIN_LED_A_R, OUTPUT);
-  //pinMode(PIN_LED_A_G, OUTPUT);
-  //pinMode(PIN_LED_A_B, OUTPUT);
-  //pinMode(PIN_LED_A_Y, OUTPUT);
-
   // Test the LEDs
   //digitalWrite(PIN_LED_RED,1); // LED red
   //delay(100);
   digitalWrite(PIN_LED_GREEN, 1); // LED green
   delay(100);
-  //ledG(true);
   ledG.setOn();
   delay(100);
-  //ledY(true);
   ledY.setOn();
   delay(100);
-  //ledR(true);
   ledR.setOn();
   delay(100);
-  //ledB(true);
   ledB.setOn();
 
   // configure MySesnsors system
@@ -280,16 +239,12 @@ void setup()
   #endif
 
   // turn the LEDs off
-  //ledG(false);
   ledG.setOff();
   delay(100);
-  //ledY(false);
   ledY.setOff();
   delay(100);
-  //ledR(false);
   ledR.setOff();
   delay(100);
-  //ledB(false);
   ledB.setOff();
   //delay(100);
   //digitalWrite(PIN_LED_RED,0); // LED red
@@ -304,13 +259,9 @@ void setup()
   #endif
 
   // TEST ONLY!
-  //ledGBlink(250);
   ledG.setBlinkInterval(250);
-  //ledYBlink(800);
   ledY.setBlinkInterval(800);
-  //ledRBlink(100);
   ledR.setBlinkInterval(100);
-  //ledBBlink(800);
   ledB.setBlinkInterval(800);
 }
 
@@ -375,125 +326,11 @@ void loop()
 }
 
 void blink() {
-  //blinkR();
-  //blinkG();
-  //blinkB();
-  //blinkY();
-
   ledR.blink();
   ledG.blink();
   ledB.blink();
   ledY.blink();
 }
-
-//unsigned long lastTimeBlinkR = cMillis();
-//boolean blinkRmark = false;
-//void blinkR() {
-//  if (blinkRtime == 0) return;
-//
-//  unsigned long time = cMillis();
-//
-//  // Zeitdifferenz zum letzten Senden
-//  unsigned long delayTime = 0;
-//  // Auf Ueberlauf pruefen
-//  if (time < lastTimeBlinkR)
-//  {
-//    // Ueberlauf: Delay ist Zeit zum MaxWert plus Zeit ab Null
-//    delayTime = MAX_U_LONG - lastTimeBlinkR + time;
-//  } else {
-//    // Kein Ueberlauf: einfache Differenz
-//    delayTime = time - lastTimeBlinkR;
-//  }
-//
-//  if (delayTime < blinkRtime) return;
-//  blinkRmark = !blinkRmark;
-//
-//  lastTimeBlinkR = time;
-//
-//  ledR(blinkRmark);
-//}
-//
-//unsigned long lastTimeBlinkG = cMillis();
-//boolean blinkGmark = false;
-//void blinkG() {
-//  if (blinkGtime == 0) return;
-//
-//  unsigned long time = cMillis();
-//
-//  // Zeitdifferenz zum letzten Senden
-//  unsigned long delayTime = 0;
-//  // Auf Ueberlauf pruefen
-//  if (time < lastTimeBlinkG)
-//  {
-//    // Ueberlauf: Delay ist Zeit zum MaxWert plus Zeit ab Null
-//    delayTime = MAX_U_LONG - lastTimeBlinkG + time;
-//  } else {
-//    // Kein Ueberlauf: einfache Differenz
-//    delayTime = time - lastTimeBlinkG;
-//  }
-//
-//  if (delayTime < blinkGtime) return;
-//  blinkGmark = !blinkGmark;
-//
-//  lastTimeBlinkG = time;
-//
-//  ledG(blinkGmark);
-//}
-//
-//unsigned long lastTimeBlinkB = cMillis();
-//boolean blinkBmark = false;
-//void blinkB() {
-//  if (blinkBtime == 0) return;
-//
-//  unsigned long time = cMillis();
-//
-//  // Zeitdifferenz zum letzten Senden
-//  unsigned long delayTime = 0;
-//  // Auf Ueberlauf pruefen
-//  if (time < lastTimeBlinkB)
-//  {
-//    // Ueberlauf: Delay ist Zeit zum MaxWert plus Zeit ab Null
-//    delayTime = MAX_U_LONG - lastTimeBlinkB + time;
-//  } else {
-//    // Kein Ueberlauf: einfache Differenz
-//    delayTime = time - lastTimeBlinkB;
-//  }
-//
-//  if (delayTime < blinkBtime) return;
-//  blinkBmark = !blinkBmark;
-//
-//  lastTimeBlinkB = time;
-//
-//  ledB(blinkBmark);
-//}
-//
-//unsigned long lastTimeBlinkY = cMillis();
-//boolean blinkYmark = false;
-//void blinkY() {
-//  if (blinkYtime == 0) return;
-//
-//  unsigned long time = cMillis();
-//
-//  // Zeitdifferenz zum letzten Senden
-//  unsigned long delayTime = 0;
-//  // Auf Ueberlauf pruefen
-//  if (time < lastTimeBlinkY)
-//  {
-//    // Ueberlauf: Delay ist Zeit zum MaxWert plus Zeit ab Null
-//    delayTime = MAX_U_LONG - lastTimeBlinkY + time;
-//  } else {
-//    // Kein Ueberlauf: einfache Differenz
-//    delayTime = time - lastTimeBlinkY;
-//  }
-//
-//  if (delayTime < blinkYtime) return;
-//  blinkYmark = !blinkYmark;
-//
-//  lastTimeBlinkY = time;
-//
-//  ledY(blinkYmark);
-//}
-
 
 //-----------------------------------------------------------------------------------------------
 // TODO: ggf. nach MSUtils verlagern
