@@ -147,6 +147,7 @@ static inputBuffer inputString[MAX_SRV_CLIENTS];
 #define USE_STATIC_IP 0
 #define STATIC_IP      192, 168, 0, 222
 #define STATIC_GATEWAY 192, 168, 0, 1
+#define STATIC_DNS     192, 168, 0, 1
 #define STATIC_SUBNET  255, 255, 255, 0
 
 void output(const char *fmt, ... )
@@ -176,14 +177,16 @@ void setup()
   Serial.println("ESP8266 MySensors Gateway");
   Serial.print("Connecting to "); Serial.println(ssid);
 
+  (void)WiFi.begin(ssid, pass);
+
   #if USE_STATIC_IP > 0
   IPAddress ip(STATIC_IP);
   IPAddress gateway(STATIC_GATEWAY); 
+  IPAddress dns(STATIC_DNS);
   IPAddress subnet(STATIC_SUBNET);  
-  WiFi.config(ip, gateway, subnet);
+  WiFi.config(ip, dns, gateway, subnet);
   #endif
 
-  (void)WiFi.begin(ssid, pass);
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
