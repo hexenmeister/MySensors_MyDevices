@@ -177,6 +177,8 @@ void setup()
   Serial.println("ESP8266 MySensors Gateway");
   Serial.print("Connecting to "); Serial.println(ssid);
 
+  WiFi.mode (WIFI_STA); // turn off AP mode
+  
   (void)WiFi.begin(ssid, pass);
 
   #if USE_STATIC_IP > 0
