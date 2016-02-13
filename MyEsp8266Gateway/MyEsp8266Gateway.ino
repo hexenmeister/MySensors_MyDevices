@@ -197,13 +197,18 @@ void setup()
   Serial.flush();
   
   setupGateway(INCLUSION_MODE_PIN, INCLUSION_MODE_TIME, output);
-
+  Serial.println("GateWay setup done!");Serial.flush();
+  
   // Initialize gateway at maximum PA level, channel 70 and callback for write operations 
   gw.begin(incomingMessage, 0, true, 0);
+
+  Serial.println("MySensors init done!");Serial.flush();
   
   // start listening for clients
   server.begin();
   server.setNoDelay(true);  
+  
+  Serial.println("Server ready!");Serial.flush();
 }
 
 
